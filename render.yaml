@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: churn-api
+    env: docker
+    dockerfilePath: api/Dockerfile
+    branch: main
+    autoDeploy: true
+    plan: free
+
+  - type: web
+    name: churn-dashboard
+    env: docker
+    dockerfilePath: dashboard/Dockerfile
+    branch: main
+    autoDeploy: true
+    plan: free
