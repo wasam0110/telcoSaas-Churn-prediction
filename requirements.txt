@@ -1,0 +1,47 @@
+# ============================================================
+# Requirements for Telco Customer Churn Prediction SaaS Project
+# ============================================================
+
+# --- Core Data Science ---
+pandas>=2.0.0              # Tabular data manipulation and analysis
+numpy>=1.24.0              # Numerical computing and array operations
+scikit-learn>=1.3.0        # Machine learning algorithms, preprocessing, metrics
+xgboost>=2.0.0             # Gradient boosting for high-performance modeling
+lightgbm>=4.0.0            # Light gradient boosting for fast training
+imbalanced-learn>=0.11.0   # SMOTE and other resampling for class imbalance
+
+# --- Model Explainability ---
+shap>=0.43.0               # SHAP values for model interpretability
+lime>=0.2.0                # Local Interpretable Model-agnostic Explanations
+
+# --- Visualization ---
+matplotlib>=3.7.0          # Static plotting library
+seaborn>=0.12.0            # Statistical data visualization built on matplotlib
+plotly>=5.15.0             # Interactive charts for dashboard
+
+# --- API ---
+fastapi>=0.100.0           # High-performance async web framework for the API
+uvicorn>=0.23.0            # ASGI server to run FastAPI
+pydantic>=2.0.0            # Data validation and serialization for API schemas
+
+# --- Dashboard ---
+streamlit>=1.28.0          # Interactive web dashboard framework
+streamlit-option-menu>=0.3.6  # Enhanced navigation menu for Streamlit
+
+# --- MLOps & Monitoring ---
+mlflow>=2.8.0              # Experiment tracking, model registry, versioning
+evidently>=0.4.0           # Data and model monitoring, drift detection
+joblib>=1.3.0              # Model serialization and parallel computing
+
+# --- Configuration ---
+pyyaml>=6.0                # YAML config file parsing
+python-dotenv>=1.0.0       # Environment variable management from .env files
+
+# --- Testing ---
+pytest>=7.4.0              # Testing framework
+pytest-cov>=4.1.0          # Test coverage reporting
+
+# --- Utilities ---
+loguru>=0.7.0              # Enhanced logging with structured output
+tqdm>=4.65.0               # Progress bars for long-running operations
+scipy>=1.11.0              # Scientific computing (used for PSI, calibration)

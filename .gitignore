@@ -1,0 +1,48 @@
+# ============================================================
+# .gitignore for Telco Customer Churn Prediction SaaS
+# ============================================================
+
+# --- Python ---
+__pycache__/               # Compiled Python bytecode cache
+*.py[cod]                  # Compiled Python files (.pyc, .pyo, .pyd)
+*.egg-info/                # Python package metadata
+*.egg                      # Python built distribution
+dist/                      # Distribution packages
+build/                     # Build artifacts
+*.whl                      # Wheel packages
+
+# --- Virtual Environments ---
+venv/                      # Virtual environment folder
+.env                       # Environment variables (secrets)
+env/                       # Alternative venv name
+
+# --- IDE ---
+.vscode/                   # VS Code settings
+.idea/                     # PyCharm settings
+*.swp                      # Vim swap files
+*.swo                      # Vim swap files
+
+# --- Data ---
+data/raw/*.csv             # Raw data files (too large for git)
+data/processed/*.csv       # Processed data files
+data/raw/*.xlsx            # Excel data files
+*.parquet                  # Parquet data files
+
+# --- Models ---
+models/*.pkl               # Serialized model files
+models/*.joblib            # Joblib-serialized models
+models/*.json              # Model metadata
+mlruns/                    # MLflow experiment tracking data
+mlartifacts/               # MLflow artifact storage
+
+# --- Logs ---
+logs/                      # Application log files
+*.log                      # Individual log files
+
+# --- OS ---
+.DS_Store                  # macOS folder metadata
+Thumbs.db                  # Windows thumbnail cache
+desktop.ini                # Windows folder settings
+
+# --- Jupyter ---
+.ipynb_checkpoints/        # Jupyter notebook checkpoints
