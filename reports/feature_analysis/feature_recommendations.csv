@@ -1,0 +1,6 @@
+recommendation,rationale,example
+Interaction features between Contract and tenure,Contract type and tenure are both top predictors; their interaction may capture retention patterns.,tenure * (1 if Contract == 'Month-to-month' else 0)
+MonthlyCharges relative to service count,Customers paying high charges relative to services used may have higher churn risk.,MonthlyCharges / (num_services + 1)
+Tenure-based segments,New customers (< 6 months) and long-tenure customers show different churn patterns.,is_new_customer = (tenure <= 6).astype(int)
+Payment method risk score,Electronic check users churn at much higher rates. Combine with billing type.,high_risk_payment = (PaymentMethod == 'Electronic check') & (PaperlessBilling == 'Yes')
+Service bundle indicator,Customers bundling multiple services may be more sticky.,has_security_bundle = (OnlineSecurity == 'Yes') & (DeviceProtection == 'Yes')

@@ -121,15 +121,20 @@ class ModelEvaluator:
         # Compute the confusion matrix: [[TN, FP], [FN, TP]]
         tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 
+        # Compute metrics with zero-division handling
+        precision = precision_score(y_true, y_pred, zero_division=0)
+        recall = recall_score(y_true, y_pred, zero_division=0)
+        f1 = f1_score(y_true, y_pred, zero_division=0)
+
         # Build the comprehensive metrics dictionary
         metrics = {
             "model": model_name,                       # Model identifier
             "threshold": threshold,                    # Decision threshold used
             "roc_auc": round(roc_auc_score(y_true, y_proba), 4),       # ROC-AUC
             "pr_auc": round(average_precision_score(y_true, y_proba), 4),  # PR-AUC
-            "f1": round(f1_score(y_true, y_pred), 4),                  # F1 Score
-            "precision": round(precision_score(y_true, y_pred), 4),    # Precision
-            "recall": round(recall_score(y_true, y_pred), 4),         # Recall
+            "f1": round(f1, 4),                                        # F1 Score
+            "precision": round(precision, 4),                          # Precision
+            "recall": round(recall, 4),                                # Recall
             "brier_score": round(brier_score_loss(y_true, y_proba), 4), # Calibration error
             "log_loss": round(log_loss(y_true, y_proba), 4),          # Cross-entropy loss
             "true_positives": int(tp),                 # Correctly identified churners

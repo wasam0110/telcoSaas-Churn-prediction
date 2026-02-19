@@ -7,7 +7,10 @@
 import numpy as np                                 # NumPy for numerical operations
 import pandas as pd                                # Pandas for DataFrames
 from sklearn.linear_model import LogisticRegression  # Linear baseline model
-from sklearn.ensemble import RandomForestClassifier  # Ensemble tree model
+from sklearn.ensemble import (
+    RandomForestClassifier,                        # Ensemble tree model
+    GradientBoostingClassifier,                    # Sklearn gradient boosting
+)
 from sklearn.calibration import CalibratedClassifierCV  # Probability calibration wrapper
 from sklearn.model_selection import cross_val_score  # Cross-validation scoring
 import xgboost as xgb                              # XGBoost gradient boosting
@@ -163,6 +166,53 @@ class ModelTrainer:
         # Return the unfitted model
         return model
 
+    def _build_gradient_boosting(self) -> GradientBoostingClassifier:
+        """
+        Build a Sklearn GradientBoostingClassifier with config hyperparameters.
+
+        Returns
+        -------
+        GradientBoostingClassifier
+            Unfitted Gradient Boosting classifier.
+        """
+        params = self.config["model"].get("gradient_boosting_params", {})
+        model = GradientBoostingClassifier(
+            n_estimators=params.get("n_estimators", 600),
+            max_depth=params.get("max_depth", 4),
+            learning_rate=params.get("learning_rate", 0.03),
+            subsample=params.get("subsample", 0.75),
+            min_samples_leaf=params.get("min_samples_leaf", 20),
+            max_features=params.get("max_features", "sqrt"),
+            random_state=params.get("random_state", 42),
+        )
+        logger.info(f"Built GradientBoosting with params: {params}")
+        return model
+
+    def _apply_smote(self, X_train: np.ndarray, y_train: np.ndarray):
+        """
+        Apply SMOTE oversampling to handle class imbalance.
+        Falls back silently if imbalanced-learn is not installed.
+
+        Returns
+        -------
+        (X_resampled, y_resampled) ndarrays
+        """
+        try:
+            from imblearn.over_sampling import SMOTE
+            sm = SMOTE(random_state=self.random_state, k_neighbors=5)
+            X_res, y_res = sm.fit_resample(X_train, y_train)
+            logger.info(
+                f"SMOTE applied: {len(y_train)} → {len(y_res)} samples "
+                f"(minority class: {int(y_train.sum())} → {int(y_res.sum())})"
+            )
+            return X_res, y_res
+        except ImportError:
+            logger.warning("imbalanced-learn not installed — skipping SMOTE.")
+            return X_train, y_train
+        except Exception as e:
+            logger.warning(f"SMOTE failed ({e}) — using original data.")
+            return X_train, y_train
+
     def train_model(
         self,
         name: str,
@@ -195,6 +245,8 @@ class ModelTrainer:
             model = self._build_logistic_regression()
         elif name == "random_forest":
             model = self._build_random_forest()
+        elif name == "gradient_boosting":
+            model = self._build_gradient_boosting()
         elif name == "xgboost":
             model = self._build_xgboost()
         elif name == "lightgbm":
@@ -240,10 +292,16 @@ class ModelTrainer:
         logger.info(f"Training {len(self.algorithms)} models...")
         logger.info("=" * 60)
 
+        # Apply SMOTE once to create a resampled training set
+        X_train_smote, y_train_smote = self._apply_smote(X_train, y_train)
+
         # Train each algorithm in the configured list
         for algo_name in self.algorithms:
-            # Train this specific model
-            self.train_model(algo_name, X_train, y_train)
+            # Boosting models train better without SMOTE (they handle imbalance natively)
+            if algo_name in ("xgboost", "lightgbm"):
+                self.train_model(algo_name, X_train, y_train)
+            else:
+                self.train_model(algo_name, X_train_smote, y_train_smote)
 
         # Log completion
         logger.info(f"All {len(self.algorithms)} models trained successfully")
@@ -289,10 +347,12 @@ class ModelTrainer:
         logger.info(f"Calibrating model '{name}' using {self.calibration_method} method")
 
         # Wrap the model with CalibratedClassifierCV
+        # Use cv=5 (cross-validation) instead of cv='prefit' for sklearn >= 1.2 compatibility
         calibrated = CalibratedClassifierCV(
             estimator=base_model,                      # The base model to calibrate
             method=self.calibration_method,            # 'isotonic' or 'sigmoid' (Platt)
-            cv="prefit",                               # Model is already fitted
+            cv=5,                                      # 5-fold CV calibration (sklearn 1.2+ compatible)
+            ensemble=True,                             # Ensemble of calibrated classifiers
         )
 
         # Fit the calibration on validation data

@@ -57,51 +57,71 @@ model:
   algorithms:
     - "logistic_regression" # Baseline linear model
     - "random_forest" # Ensemble of decision trees
+    - "gradient_boosting" # Sklearn GradientBoosting
     - "xgboost" # Gradient boosting (XGBoost)
     - "lightgbm" # Light Gradient Boosting Machine
 
-  # XGBoost hyperparameters
+  # XGBoost hyperparameters  (significantly tuned)
   xgboost_params:
-    n_estimators: 500 # Number of boosting rounds
-    max_depth: 6 # Maximum tree depth
-    learning_rate: 0.05 # Step size shrinkage
-    subsample: 0.8 # Row sampling ratio per tree
-    colsample_bytree: 0.8 # Column sampling ratio per tree
+    n_estimators: 800 # More rounds for better convergence
+    max_depth: 5 # Shallower trees = less overfitting
+    learning_rate: 0.02 # Lower LR with more rounds
+    subsample: 0.75 # Row sub-sampling per tree
+    colsample_bytree: 0.75 # Column sub-sampling per tree
+    colsample_bylevel: 0.75 # Column sub-sampling per level
+    min_child_weight: 5 # Larger value = more conservative
+    gamma: 0.1 # Min loss reduction to split
+    reg_alpha: 0.1 # L1 regularisation
+    reg_lambda: 1.5 # L2 regularisation
     scale_pos_weight: 3.0 # Weight for minority class (churn)
-    eval_metric: "aucpr" # Optimize for PR-AUC
+    eval_metric: "aucpr" # Optimise for PR-AUC
     early_stopping_rounds: 50 # Stop if no improvement for 50 rounds
-    random_state: 42 # Reproducibility seed
+    random_state: 42
 
-  # LightGBM hyperparameters
+  # LightGBM hyperparameters  (significantly tuned)
   lightgbm_params:
-    n_estimators: 500 # Number of boosting iterations
-    max_depth: -1 # No depth limit (leaf-wise growth)
-    learning_rate: 0.05 # Step size shrinkage
-    num_leaves: 31 # Maximum number of leaves per tree
-    subsample: 0.8 # Bagging fraction
-    colsample_bytree: 0.8 # Feature fraction
+    n_estimators: 800 # More iterations
+    max_depth: 6 # Limit depth
+    learning_rate: 0.02 # Lower LR
+    num_leaves: 40 # More leaves than default
+    min_child_samples: 30 # Min data in a leaf
+    subsample: 0.75 # Bagging fraction
+    colsample_bytree: 0.75 # Feature fraction
+    reg_alpha: 0.1 # L1
+    reg_lambda: 0.5 # L2
     is_unbalance: true # Auto-handle class imbalance
     metric: "average_precision" # Optimize for PR-AUC
-    early_stopping_rounds: 50 # Patience for early stopping
-    random_state: 42 # Reproducibility seed
+    early_stopping_rounds: 50
+    random_state: 42
 
-  # Random Forest hyperparameters
+  # Random Forest hyperparameters  (tuned)
   random_forest_params:
-    n_estimators: 300 # Number of trees in the forest
-    max_depth: 15 # Maximum depth per tree
-    min_samples_split: 10 # Minimum samples to split a node
-    min_samples_leaf: 5 # Minimum samples in a leaf
-    class_weight: "balanced" # Auto-weight classes by frequency
-    random_state: 42 # Reproducibility seed
+    n_estimators: 500 # More trees
+    max_depth: 12 # Controlled depth
+    min_samples_split: 8 # Slightly less aggressive
+    min_samples_leaf: 4 # Small leaves allowed
+    max_features: "sqrt" # Classic RF feature sampling
+    class_weight: "balanced_subsample" # Per-tree balanced weights
+    random_state: 42
 
-  # Logistic Regression hyperparameters
+  # Logistic Regression hyperparameters  (tuned)
   logistic_regression_params:
-    C: 1.0 # Inverse regularization strength
-    penalty: "l2" # L2 (Ridge) regularization
-    solver: "lbfgs" # Optimization algorithm
-    max_iter: 1000 # Maximum solver iterations
-    class_weight: "balanced" # Auto-weight classes by frequency
-    random_state: 42 # Reproducibility seed
+    C: 0.3 # More regularisation
+    penalty: "l2"
+    solver: "lbfgs"
+    max_iter: 2000
+    class_weight: "balanced"
+    random_state: 42
+
+  # Gradient Boosting hyperparameters (sklearn)
+  gradient_boosting_params:
+    n_estimators: 600
+    max_depth: 4
+    learning_rate: 0.03
+    subsample: 0.75
+    min_samples_leaf: 20
+    max_features: "sqrt"
+    random_state: 42
 
   # Probability calibration method
   calibration_method: "isotonic" # "sigmoid" (Platt) or "isotonic"

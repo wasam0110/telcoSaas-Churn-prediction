@@ -254,21 +254,70 @@ def run_training_pipeline():
     # Evaluate each model and collect results
     all_results = {}                               # Dictionary for all evaluation results
     for name, model in calibrated_models.items():
-        # Compute comprehensive metrics
-        metrics = evaluator.compute_metrics(model, X_test_selected, y_test)
+        # Get predicted probabilities
+        if hasattr(model, "predict_proba"):
+            y_proba = model.predict_proba(X_test_selected)[:, 1]
+        elif hasattr(model, "decision_function"):
+            scores = model.decision_function(X_test_selected)
+            y_proba = 1 / (1 + np.exp(-scores))
+        else:
+            raise ValueError("Model has neither predict_proba nor decision_function")
+        
+        # Use the optimized threshold for this model
+        opt_threshold = thresholds[name]
+        
+        # Compute comprehensive metrics with the optimized threshold
+        metrics = evaluator.compute_metrics(y_test, y_proba, threshold=opt_threshold, model_name=name)
+        
+        # Add accuracy metric
+        y_pred = (y_proba >= opt_threshold).astype(int)
+        accuracy = (y_pred == y_test).mean()
+        metrics['accuracy'] = round(float(accuracy), 4)
+        
         all_results[name] = metrics
         # Log key metrics
         logger.info(f"  {name}:")
         logger.info(f"    ROC-AUC: {metrics.get('roc_auc', 0):.4f}")
         logger.info(f"    PR-AUC:  {metrics.get('pr_auc', 0):.4f}")
         logger.info(f"    F1:      {metrics.get('f1', 0):.4f}")
+        logger.info(f"    Accuracy: {metrics.get('accuracy', 0):.4f}")
 
     # Generate comparison plots
     try:
-        evaluator.compare_models(calibrated_models, X_test_selected, y_test)
+        # compare_models expects {name: (y_true, y_proba)} dict
+        models_predictions = {}
+        for name, model in calibrated_models.items():
+            if hasattr(model, "predict_proba"):
+                y_p = model.predict_proba(X_test_selected)[:, 1]
+            else:
+                scores = model.decision_function(X_test_selected)
+                y_p = 1 / (1 + np.exp(-scores))
+            models_predictions[name] = (y_test, y_p)
+        evaluator.compare_models(models_predictions)
         logger.info("Evaluation plots saved to reports/")
     except Exception as e:
         logger.warning(f"Plot generation failed: {e}")
+
+    # Save all model metrics to JSON for the dashboard
+    import json
+    all_metrics_with_threshold = {}
+    for name in all_results:
+        # Convert all metric values to JSON-serializable types
+        metrics_dict = {}
+        for key, value in all_results[name].items():
+            if isinstance(value, (np.integer, np.floating)):
+                metrics_dict[key] = float(value)
+            elif isinstance(value, (int, float, str, bool, type(None))):
+                metrics_dict[key] = value
+            else:
+                # Skip non-serializable values
+                continue
+        
+        all_metrics_with_threshold[name] = metrics_dict
+    
+    with open("models/all_model_metrics.json", "w") as f:
+        json.dump(all_metrics_with_threshold, f, indent=2)
+    logger.info("All model metrics saved to models/all_model_metrics.json")
 
     # Determine the best model by ROC-AUC
     best_model_name = max(all_results, key=lambda k: all_results[k].get("roc_auc", 0))
@@ -282,13 +331,13 @@ def run_training_pipeline():
     # ----------------------------------------------------------
     logger.info("Step 8: Generating SHAP explanations...")
     try:
-        # Create a ModelExplainer instance
-        explainer = ModelExplainer(config)
+        # Create a ModelExplainer instance with required args: model, X_train, feature_names
+        explainer = ModelExplainer(best_model, X_train_selected, selected_features)
         # Compute SHAP values using a sample of test data
         sample_size = min(500, X_test_selected.shape[0])
         X_sample = X_test_selected[:sample_size]
         # Compute SHAP values
-        shap_values = explainer.compute_shap_values(best_model, X_sample, selected_features)
+        shap_values = explainer.compute_shap_values(X_sample)
         # Get global feature importance
         importance = explainer.get_global_importance()
         logger.info("Top 10 most important features:")
@@ -326,8 +375,14 @@ def run_training_pipeline():
             config=config,
         )
         # Promote the newly registered model to production
-        registry.promote_to_production(best_model_name, version)
-        logger.info(f"Model registered as {best_model_name} v{version} (production)")
+        # promote_to_production only takes version_id (the full string returned by register_model)
+        version_id_str = f"{best_model_name}_v{version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Use the version_id from register_model's return value held in registry index
+        all_versions = [k for k in registry.index["models"] if k.startswith(best_model_name)]
+        if all_versions:
+            latest_version_id = sorted(all_versions)[-1]
+            registry.promote_to_production(latest_version_id)
+            logger.info(f"Model registered as {latest_version_id} (production)")
     except Exception as e:
         logger.warning(f"Model registration failed: {e}")
 
